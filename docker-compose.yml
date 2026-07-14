@@ -1,0 +1,55 @@
+version: '3.9'
+
+services:
+  # --- Cơ sở dữ liệu MongoDB (chạy nội bộ trong Docker, không cần Atlas, không lỗi DNS) ---
+  mongodb:
+    image: mongo:7
+    container_name: food-order-mongodb
+    restart: unless-stopped
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Backend API (Node.js + Express) ---
+  server:
+    build:
+      context: ./server
+    container_name: food-order-server
+    restart: unless-stopped
+    ports:
+      - '5000:5000'
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGO_URI: mongodb://mongodb:27017/food-order
+      JWT_SECRET: ${JWT_SECRET:-doi_chuoi_bi_mat_nay_truoc_khi_dua_len_production}
+      JWT_EXPIRE: 7d
+      CLIENT_URL: http://localhost:5173
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    volumes:
+      - server_uploads:/app/uploads
+
+  # --- Frontend (React, build sẵn, phục vụ qua Nginx) ---
+  client:
+    build:
+      context: ./client
+      args:
+        VITE_API_URL: http://localhost:5000/api
+    container_name: food-order-client
+    restart: unless-stopped
+    ports:
+      - '5173:80'
+    depends_on:
+      - server
+
+volumes:
+  mongo_data:
+  server_uploads:
