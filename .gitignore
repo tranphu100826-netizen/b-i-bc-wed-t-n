@@ -4,8 +4,3 @@ dist/
 build/
 *.log
 .DS_Store
-server/uploads/*
-!server/uploads/.gitkeep
-server/logs/*
-!server/logs/.gitkeep
-coverage/
